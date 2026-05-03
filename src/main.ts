@@ -30,7 +30,7 @@ export default class YomiNaru extends Plugin {
 	}
 
 	private splitIntoChunks(note: string): string[] {
-		return note.split(/(\n+)/)
+		return note.split(/(\n+|[。、！？「」]+)/)
 	}
 
 	private async processChunk(chunk: string): Promise<string> {
