@@ -7,8 +7,11 @@ export default class YomiNaru extends Plugin {
 			id: "yn-process-note",
 			name: "Kanjify",
 			hotkeys: [{ modifiers: ['Mod'], key:'y'}],
-			editorCallback: (editor: Editor) => {
-
+			editorCallback: async (editor: Editor) => {
+				const file = this.app.workspace.getActiveFile()
+				if (file) {
+					const note = await this.app.vault.read(file)
+				}
 			}
 		})
 	}
