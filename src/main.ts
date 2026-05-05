@@ -46,16 +46,46 @@ export default class YomiNaru extends Plugin {
 
 	private async processNote(note: string): Promise<string> {
 		this.wrappedTokenCount = 0
-		const chunks = this.splitIntoChunks(note)
+		const chunks = this.splitIntoProcessableChunks(note)
 		const processedChunks = await Promise.all(
-			chunks.map((chunk) => this.processChunk(chunk))
+			chunks.map((chunk) => {
+				if (chunk.isRuby) {
+					return chunk.text
+				}
+
+				return this.processChunk(chunk.text)
+			})
 		)
 
 		return processedChunks.join('')
 	}
 
-	private splitIntoChunks(note: string): string[] {
-		return note.split(/(\n+|[。！？「」]+)/) 		//regex for parsing chunks
+	private splitIntoProcessableChunks(note: string): { text: string; isRuby: boolean }[] {
+		const rubyPattern = /<ruby>[\s\S]*?<\/ruby>/gi
+		const chunks: { text: string; isRuby: boolean }[] = []
+		let lastIndex = 0
+		let match: RegExpExecArray | null
+
+		while ((match = rubyPattern.exec(note)) !== null) {
+			if (match.index > lastIndex) {
+				chunks.push(...this.splitPlainTextIntoChunks(note.slice(lastIndex, match.index)))
+			}
+
+			chunks.push({ text: match[0], isRuby: true })
+			lastIndex = rubyPattern.lastIndex
+		}
+
+		if (lastIndex < note.length) {
+			chunks.push(...this.splitPlainTextIntoChunks(note.slice(lastIndex)))
+		}
+
+		return chunks
+	}
+
+	private splitPlainTextIntoChunks(text: string): { text: string; isRuby: boolean }[] {
+		return text
+			.split(/(\n+|[。！？「」]+)/) // regex for parsing chunks
+			.map((chunk) => ({ text: chunk, isRuby: false }))
 	}
 
 	private async processChunk(chunk: string): Promise<string> {
