@@ -43,7 +43,7 @@ export default class YomiNaru extends Plugin {
 		this.addCommand({
 			id: "yn-process-note",
 			name: "Furiganize All",
-			hotkeys: [{ modifiers: ['Mod', 'Shift'], key: 'y' }],
+			hotkeys: [{ modifiers: ['Mod','Shift'], key:'y'}],
 			editorCallback: async (editor: Editor) => {
 				const note = editor.getValue()
 				const processedNote = await this.processNote(note)
@@ -128,7 +128,7 @@ export default class YomiNaru extends Plugin {
 
 			if (this.containsKanji(surface) && reading) {
 				const hiragana = this.katakanaToHiragana(reading)
-				result += this.readingToRuby(surface, hiragana)
+				result += this.wordToRuby(surface, hiragana)
 				this.wrappedTokenCount += 1
 			} else {
 				result += surface
@@ -174,6 +174,33 @@ export default class YomiNaru extends Plugin {
 		return input.replace(/[\u30A1-\u30F6]/g, (char) => {
 			return String.fromCharCode(char.charCodeAt(0) - 0x60)
 		})
+	}
+
+	private wordToRuby(surface: string, reading: string): string {
+		const leadingKanaMatch = surface.match(/^[ぁ-ゖァ-ヺー]+/)
+		const trailingKanaMatch = surface.match(/[ぁ-ゖァ-ヺー]+$/)
+
+		const leadingKana = leadingKanaMatch?.[0] ?? ''
+		const trailingKana = trailingKanaMatch?.[0] ?? ''
+
+		let rubyBase = surface
+		let rubyReading = reading
+
+		if (leadingKana && rubyReading.startsWith(this.katakanaToHiragana(leadingKana))) {
+			rubyBase = rubyBase.slice(leadingKana.length)
+			rubyReading = rubyReading.slice(this.katakanaToHiragana(leadingKana).length)
+		}
+
+		if (trailingKana && rubyReading.endsWith(this.katakanaToHiragana(trailingKana))) {
+			rubyBase = rubyBase.slice(0, rubyBase.length - trailingKana.length)
+			rubyReading = rubyReading.slice(0, rubyReading.length - this.katakanaToHiragana(trailingKana).length)
+		}
+
+		if (!rubyBase || !rubyReading || !this.containsKanji(rubyBase)) {
+			return surface
+		}
+
+		return `${leadingKana}${this.readingToRuby(rubyBase, rubyReading)}${trailingKana}`
 	}
 
 	private readingToRuby(kanji: string, reading: string): string {
