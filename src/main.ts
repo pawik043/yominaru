@@ -11,18 +11,39 @@ const DEFAULT_SETTINGS: YomiNaruSettings = {
 }
 
 export default class YomiNaru extends Plugin {
+
 	private tokenizer: kuromoji.Tokenizer<kuromoji.IpadicFeatures> | null = null
 	private wrappedTokenCount = 0
+
 	settings: YomiNaruSettings
+	
 	async onload() {
 		console.log("Loading YomiNaru")
 		await this.loadSettings()
 		this.tokenizer = await this.buildTokenizer()
 		console.log('YomiNaru tokenizer ready')
+
+		this.addCommand({
+			id: 'yn-process-selected',
+			name: 'Furiganize Selection',
+			hotkeys: [{ modifiers: ['Mod'], key: 'y' }],
+			editorCallback: async (editor: Editor) => {
+				const selection = editor.getSelection()
+
+				if (!selection) {
+					new Notice('YomiNaru: no text selected')
+					return
+				}
+
+				const processedSelection = await this.processNote(selection)
+				editor.replaceSelection(processedSelection)
+				new Notice(`YomiNaru processed ${this.wrappedTokenCount} kanji token(s)`)
+			}
+		})
 		this.addCommand({
 			id: "yn-process-note",
-			name: "Kanjify",
-			hotkeys: [{ modifiers: ['Mod'], key:'y'}],
+			name: "Furiganize All",
+			hotkeys: [{ modifiers: ['Mod', 'Shift'], key: 'y' }],
 			editorCallback: async (editor: Editor) => {
 				const note = editor.getValue()
 				const processedNote = await this.processNote(note)
